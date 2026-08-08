@@ -24,11 +24,23 @@
 //                                 falhar)
 //   GET  /getMqtt              -> config MQTT atual (sem senha)
 //   POST /setMqtt                -> aplica + salva config MQTT
+//   POST /testMqtt                 -> publica o corpo da requisicao
+//                                     (texto/JSON livre) no topico
+//                                     configurado, pra testar a
+//                                     conexao com o broker sem
+//                                     esperar um pacote LoRa de
+//                                     verdade (ver TestMqttRequest)
+//   POST /testLora                  -> transmite o corpo da
+//                                     requisicao pelo radio LoRa,
+//                                     pra testar o TX sem precisar
+//                                     de outro transmissor (ver
+//                                     TestLoraRequest)
 //   GET  /status                  -> snapshot de status (JSON) --
 //                                    ver struct Status abaixo
 //   WS   /ws                       -> push em tempo real: pacotes
 //                                     recebidos e resultado de cada
-//                                     publish MQTT
+//                                     publish MQTT (real ou de teste)
+//                                     e de cada envio de teste LoRa
 class WebDashboard
 {
 public:
@@ -59,12 +71,33 @@ public:
         String password;
     };
 
+    // Pedido de publish de teste (POST /testMqtt) -- fica pendente
+    // ate main.cpp tratar no loop(). Precisa desse vai-e-volta porque
+    // o mqttClient (PubSubClient) vive em main.cpp, nao aqui dentro;
+    // fazer o publish direto no handler HTTP tambem travaria a
+    // tarefa async_tcp se o broker estiver lento pra responder.
+    struct TestMqttRequest
+    {
+        bool pending = false;
+        String payload;
+    };
+
+    // Pedido de transmissao de teste (POST /testLora) -- mesmo motivo
+    // do TestMqttRequest acima: o objeto `radio` vive em main.cpp.
+    struct TestLoraRequest
+    {
+        bool pending = false;
+        String message;
+    };
+
     bool begin(LoRa& radio, LoraRuntimeConfig& loraConfig, NetworkRuntimeConfig& netConfig);
 
     // main.cpp chama isso sempre que ha algo novo pra reportar --
-    // ambos fazem "no-op" rapido se nao houver clientes WS conectados.
+    // todos fazem "no-op" rapido se nao houver clientes WS conectados.
     void broadcastPacket(const char* packet, float rssi, float snr);
     void broadcastMqttResult(bool ok);
+    void broadcastMqttTestResult(bool ok);
+    void broadcastLoraSendResult(bool ok);
 
     // main.cpp chama isso (ex.: a cada 2s) com um snapshot atual --
     // fica guardado pra responder GET /status sem precisar acessar
@@ -77,6 +110,13 @@ public:
     const WifiChangeRequest& pendingWifiChange() const { return _wifiChangeRequest; }
     void clearWifiChangeRequest() { _wifiChangeRequest.pending = false; }
 
+    // Mesma logica de pending/clear acima, pros dois pedidos de teste.
+    const TestMqttRequest& pendingTestMqtt() const { return _testMqttRequest; }
+    void clearTestMqttRequest() { _testMqttRequest.pending = false; }
+
+    const TestLoraRequest& pendingTestLora() const { return _testLoraRequest; }
+    void clearTestLoraRequest() { _testLoraRequest.pending = false; }
+
 private:
 
     AsyncWebServer server{80};
@@ -84,6 +124,8 @@ private:
 
     Status _status{};
     WifiChangeRequest _wifiChangeRequest;
+    TestMqttRequest   _testMqttRequest;
+    TestLoraRequest   _testLoraRequest;
 
     String statusJson() const;
 };

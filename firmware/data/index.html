@@ -12,6 +12,7 @@
 
 <header>
     <h1>LoRa Receiver</h1>
+    <p class="subtitle">Dashboard de recepcao e configuracao</p>
     <div id="statusBar">
         <span id="wifiBadge" class="badge">WiFi: --</span>
         <span id="apBadge" class="badge hidden">AP: --</span>
@@ -51,7 +52,7 @@
             </div>
         </div>
 
-        <h3>Pacotes recebidos (tempo real)</h3>
+        <h3 class="sectionTitle">Pacotes recebidos (tempo real)</h3>
         <div id="packetLog"></div>
 
     </section>
@@ -59,59 +60,78 @@
     <!-- ===== LORA ===== -->
     <section class="tabPanel hidden" id="tab-lora">
         <form id="loraForm">
-            <section class="card">
-                <h3>Frequencia (Hz)</h3>
-                <input type="number" id="freq" placeholder="915000000">
-            </section>
-            <section class="card">
-                <h3>Spreading Factor</h3>
-                <input type="number" id="sf" placeholder="10">
-            </section>
-            <section class="card">
-                <h3>Bandwidth (Hz)</h3>
-                <input type="number" id="bd" placeholder="125000">
-            </section>
-            <section class="card">
-                <h3>Sync Word (decimal)</h3>
-                <input type="number" id="sync" placeholder="18">
-            </section>
-            <section class="card">
-                <h3>Coding Rate</h3>
-                <input type="number" id="cr" placeholder="5">
-            </section>
-            <section class="card">
-                <h3>Potencia TX (dBm)</h3>
-                <input type="number" id="power" placeholder="20">
-            </section>
-            <section class="card">
-                <h3>CRC</h3>
-                <select id="crc">
-                    <option value="1">Habilitado</option>
-                    <option value="0">Desabilitado</option>
-                </select>
-            </section>
+            <div class="cardGrid">
+                <section class="card">
+                    <h3>Frequencia (Hz)</h3>
+                    <input type="number" id="freq" placeholder="915000000">
+                </section>
+                <section class="card">
+                    <h3>Spreading Factor</h3>
+                    <input type="number" id="sf" placeholder="10">
+                </section>
+                <section class="card">
+                    <h3>Bandwidth (Hz)</h3>
+                    <input type="number" id="bd" placeholder="125000">
+                </section>
+                <section class="card">
+                    <h3>Sync Word (decimal)</h3>
+                    <input type="number" id="sync" placeholder="18">
+                </section>
+                <section class="card">
+                    <h3>Coding Rate</h3>
+                    <input type="number" id="cr" placeholder="5">
+                </section>
+                <section class="card">
+                    <h3>Potencia TX (dBm)</h3>
+                    <input type="number" id="power" placeholder="20">
+                </section>
+                <section class="card">
+                    <h3>CRC</h3>
+                    <select id="crc">
+                        <option value="1">Habilitado</option>
+                        <option value="0">Desabilitado</option>
+                    </select>
+                </section>
+            </div>
             <div class="actions">
                 <button type="submit">Salvar configuracao do radio</button>
             </div>
             <p class="status" id="loraStatus"></p>
         </form>
+
+        <div class="testPanel">
+            <h3>Enviar pacote de teste (TX)</h3>
+            <p class="hint">
+                Transmite o texto abaixo pelo radio LoRa agora mesmo, como se
+                fosse outro transmissor -- util pra testar o TX sem precisar
+                de um segundo modulo. Ja vem preenchido com um JSON de
+                exemplo, edite a vontade antes de enviar.
+            </p>
+            <textarea id="loraTestMessage">{"id":"teste-01","temp":24.7,"hum":58.3,"batt":3.95}</textarea>
+            <div class="actions">
+                <button type="button" class="btnPrimary" id="loraTestSendBtn">Transmitir pacote de teste</button>
+            </div>
+            <p class="status" id="loraTestStatus"></p>
+        </div>
     </section>
 
     <!-- ===== WIFI ===== -->
     <section class="tabPanel hidden" id="tab-wifi">
         <form id="wifiForm">
-            <section class="card">
-                <h3>SSID atual</h3>
-                <p id="currentSsid" class="readonly">--</p>
-            </section>
-            <section class="card">
-                <h3>Novo SSID</h3>
-                <input type="text" id="wifiSsid" placeholder="nome da rede">
-            </section>
-            <section class="card">
-                <h3>Nova senha</h3>
-                <input type="password" id="wifiPassword" placeholder="senha">
-            </section>
+            <div class="cardGrid">
+                <section class="card">
+                    <h3>SSID atual</h3>
+                    <p id="currentSsid" class="readonly">--</p>
+                </section>
+                <section class="card">
+                    <h3>Novo SSID</h3>
+                    <input type="text" id="wifiSsid" placeholder="nome da rede">
+                </section>
+                <section class="card">
+                    <h3>Nova senha</h3>
+                    <input type="password" id="wifiPassword" placeholder="senha">
+                </section>
+            </div>
             <div class="actions">
                 <button type="submit">Trocar WiFi</button>
             </div>
@@ -123,57 +143,85 @@
             <p class="status" id="wifiStatus"></p>
         </form>
 
-        <h3>Redes secundarias (fallback, em ordem de prioridade)</h3>
-        <p class="hint">
-            Usadas so' se a rede principal acima nao conectar -- tentadas
-            na ordem de prioridade (menor numero primeiro). Se nenhuma
-            conectar, o receptor cria um ponto de acesso proprio pra
-            reconfiguracao (confira a serial, ou o badge "AP" no topo
-            se voce ja estiver conectado nele agora).
-        </p>
-        <div id="wifiSecondaryList"></div>
-        <div class="actions">
-            <button type="button" id="wifiSecondaryAddBtn">+ Adicionar rede</button>
-            <button type="button" id="wifiSecondarySaveBtn">Salvar redes secundarias</button>
+        <h3 class="sectionTitle">Redes secundarias (fallback, em ordem de prioridade)</h3>
+        <div class="wifiSecondaryPanel">
+            <p class="hint">
+                Usadas so' se a rede principal acima nao conectar -- tentadas
+                na ordem de prioridade (menor numero primeiro). Se nenhuma
+                conectar, o receptor cria um ponto de acesso proprio pra
+                reconfiguracao (confira a serial, ou o badge "AP" no topo
+                se voce ja estiver conectado nele agora).
+            </p>
+            <div id="wifiSecondaryList"></div>
+            <div class="actions">
+                <button type="button" class="btnSecondary" id="wifiSecondaryAddBtn">+ Adicionar rede</button>
+                <button type="button" class="btnPrimary" id="wifiSecondarySaveBtn">Salvar redes secundarias</button>
+            </div>
+            <p class="status" id="wifiSecondaryStatus"></p>
         </div>
-        <p class="status" id="wifiSecondaryStatus"></p>
     </section>
 
     <!-- ===== MQTT ===== -->
     <section class="tabPanel hidden" id="tab-mqtt">
         <form id="mqttForm">
-            <section class="card">
-                <h3>Broker (IP ou host)</h3>
-                <input type="text" id="mqttServer" placeholder="192.168.1.34">
-            </section>
-            <section class="card">
-                <h3>Porta</h3>
-                <input type="number" id="mqttPort" placeholder="1883">
-            </section>
-            <section class="card">
-                <h3>Usuario (deixe vazio se anonimo)</h3>
-                <input type="text" id="mqttUser" placeholder="">
-            </section>
-            <section class="card">
-                <h3>Topico de publicacao</h3>
-                <input type="text" id="mqttTopic" placeholder="telemetry">
-            </section>
-            <section class="card">
-                <h3>Senha</h3>
-                <input type="password" id="mqttPassword" placeholder="">
-            </section>
-            <section class="card">
-                <h3>MQTT habilitado</h3>
-                <select id="mqttEnabled">
-                    <option value="1">Sim -- publica e assina tópicos</option>
-                    <option value="0">Nao -- so LoRa + pagina web</option>
-                </select>
-            </section>
+            <div class="cardGrid">
+                <section class="card">
+                    <h3>Broker (IP ou host)</h3>
+                    <input type="text" id="mqttServer" placeholder="192.168.1.34">
+                </section>
+                <section class="card">
+                    <h3>Porta</h3>
+                    <input type="number" id="mqttPort" placeholder="1883">
+                </section>
+                <section class="card">
+                    <h3>Usuario (deixe vazio se anonimo)</h3>
+                    <input type="text" id="mqttUser" placeholder="">
+                </section>
+                <section class="card">
+                    <h3>Topico de publicacao</h3>
+                    <input type="text" id="mqttTopic" placeholder="telemetry">
+                </section>
+                <section class="card">
+                    <h3>Senha</h3>
+                    <input type="password" id="mqttPassword" placeholder="">
+                </section>
+                <section class="card">
+                    <h3>MQTT habilitado</h3>
+                    <select id="mqttEnabled">
+                        <option value="1">Sim -- publica e assina topicos</option>
+                        <option value="0">Nao -- so LoRa + pagina web</option>
+                    </select>
+                </section>
+            </div>
             <div class="actions">
                 <button type="submit">Salvar configuracao MQTT</button>
             </div>
             <p class="status" id="mqttStatus"></p>
         </form>
+
+        <div class="testPanel">
+            <h3>Testar conexao (publish fake)</h3>
+            <p class="hint">
+                Publica um JSON no topico configurado acima agora mesmo,
+                sem precisar esperar um pacote LoRa de verdade chegar --
+                bom pra confirmar que o broker esta alcancavel. O nome
+                do campo abaixo vira a chave do JSON publicado.
+            </p>
+            <div class="testFieldsRow">
+                <div class="wsField">
+                    <label class="fieldLabel">Nome do campo</label>
+                    <input type="text" id="mqttTestFieldName" value="data">
+                </div>
+                <div class="wsField">
+                    <label class="fieldLabel">Valor de teste</label>
+                    <input type="text" id="mqttTestFieldValue" value="TESTE-CONEXAO">
+                </div>
+            </div>
+            <div class="actions">
+                <button type="button" class="btnPrimary" id="mqttTestSendBtn">Publicar mensagem de teste</button>
+            </div>
+            <p class="status" id="mqttTestStatus"></p>
+        </div>
     </section>
 
 </main>

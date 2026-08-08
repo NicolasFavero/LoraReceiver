@@ -103,6 +103,10 @@ function connectWebSocket() {
                 addPacketEntry(msg.packet, msg.rssi, msg.snr);
             } else if (msg.type === "mqtt") {
                 markLastMqttResult(msg.ok);
+            } else if (msg.type === "mqttTest") {
+                showMqttTestResult(msg.ok);
+            } else if (msg.type === "loraSend") {
+                showLoraTestResult(msg.ok);
             }
         } catch (e) { /* mensagem inesperada -- ignora */ }
     };
@@ -252,18 +256,96 @@ document.getElementById("mqttForm").addEventListener("submit", async (e) => {
 });
 loadMqttConfig();
 
+// ===================== Teste MQTT (publish fake) =====================
+function showMqttTestResult(ok) {
+    const statusEl = document.getElementById("mqttTestStatus");
+    statusEl.textContent = ok ? "Mensagem publicada com sucesso." : "Falha ao publicar -- confira se o MQTT esta habilitado/conectado.";
+    statusEl.className = "status " + (ok ? "ok" : "error");
+}
+
+document.getElementById("mqttTestSendBtn").addEventListener("click", async () => {
+    const statusEl = document.getElementById("mqttTestStatus");
+    const fieldName = document.getElementById("mqttTestFieldName").value.trim() || "data";
+    const fieldValue = document.getElementById("mqttTestFieldValue").value;
+
+    const body = JSON.stringify({ [fieldName]: fieldValue, teste: true });
+
+    statusEl.textContent = "Enviando... (aguardando confirmacao do broker)";
+    statusEl.className = "status";
+
+    try {
+        const r = await fetch("/testMqtt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: body
+        });
+        const text = await r.text();
+        if (!r.ok) throw new Error(text);
+        // resultado de verdade chega via WebSocket (showMqttTestResult) --
+        // isso aqui so confirma que o pedido foi aceito.
+    } catch (err) {
+        statusEl.textContent = "Erro: " + err.message;
+        statusEl.className = "status error";
+    }
+});
+
+// ===================== Teste LoRa (TX avulso) =====================
+function showLoraTestResult(ok) {
+    const statusEl = document.getElementById("loraTestStatus");
+    statusEl.textContent = ok ? "Pacote transmitido com sucesso." : "Falha ao transmitir o pacote.";
+    statusEl.className = "status " + (ok ? "ok" : "error");
+}
+
+document.getElementById("loraTestSendBtn").addEventListener("click", async () => {
+    const statusEl = document.getElementById("loraTestStatus");
+    const message = document.getElementById("loraTestMessage").value;
+
+    if (!message.trim()) {
+        statusEl.textContent = "Preencha a mensagem de teste.";
+        statusEl.className = "status error";
+        return;
+    }
+
+    statusEl.textContent = "Transmitindo... (aguardando confirmacao do radio)";
+    statusEl.className = "status";
+
+    try {
+        const r = await fetch("/testLora", {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: message
+        });
+        const text = await r.text();
+        if (!r.ok) throw new Error(text);
+        // resultado de verdade chega via WebSocket (showLoraTestResult) --
+        // isso aqui so confirma que o pedido foi aceito.
+    } catch (err) {
+        statusEl.textContent = "Erro: " + err.message;
+        statusEl.className = "status error";
+    }
+});
+
 // ===================== WiFi secundario (fallback) =====================
 const wifiSecondaryList = document.getElementById("wifiSecondaryList");
 
 function addWifiSecondaryRow(ssid = "", priority = 0) {
-    const row = document.createElement("section");
-    row.className = "card wifiSecondaryRow";
+    const row = document.createElement("div");
+    row.className = "wifiSecondaryRow";
 
     row.innerHTML =
-        '<input type="text" class="wsSsid" placeholder="nome da rede" value="' +
-            ssid.replace(/"/g, "&quot;") + '">' +
-        '<input type="password" class="wsPassword" placeholder="senha (vazio = manter a atual)">' +
-        '<input type="number" class="wsPriority" placeholder="prioridade" value="' + priority + '">' +
+        '<div class="wsField">' +
+            '<label class="fieldLabel">SSID</label>' +
+            '<input type="text" class="wsSsid" placeholder="nome da rede" value="' +
+                ssid.replace(/"/g, "&quot;") + '">' +
+        '</div>' +
+        '<div class="wsField">' +
+            '<label class="fieldLabel">Senha</label>' +
+            '<input type="password" class="wsPassword" placeholder="vazio = manter a atual">' +
+        '</div>' +
+        '<div class="wsField">' +
+            '<label class="fieldLabel">Prioridade</label>' +
+            '<input type="number" class="wsPriority" placeholder="0" value="' + priority + '">' +
+        '</div>' +
         '<button type="button" class="wsRemoveBtn">Remover</button>';
 
     row.querySelector(".wsRemoveBtn").addEventListener("click", () => row.remove());

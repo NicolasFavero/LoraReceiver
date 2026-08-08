@@ -116,6 +116,53 @@ bool WebDashboard::begin(LoRa& radio, LoraRuntimeConfig& loraConfig, NetworkRunt
         }
     );
 
+    // --- Testes (MQTT fake publish / TX LoRa avulso) ---
+    // Ambos so' guardam o pedido -- main.cpp e quem tem o mqttClient/
+    // radio de verdade e trata isso no loop() (ver comentario de
+    // TestMqttRequest/TestLoraRequest no header).
+
+    server.on(
+        "/testMqtt", HTTP_POST,
+        [](AsyncWebServerRequest *request) {},
+        nullptr,
+        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            String payload;
+            payload.reserve(len);
+            for (size_t i = 0; i < len; i++) payload += (char)data[i];
+
+            if (payload.length() == 0) {
+                request->send(400, "text/plain", "Mensagem vazia.");
+                return;
+            }
+
+            _testMqttRequest.pending = true;
+            _testMqttRequest.payload = payload;
+
+            request->send(200, "text/plain", "Enviando mensagem de teste ao broker MQTT...");
+        }
+    );
+
+    server.on(
+        "/testLora", HTTP_POST,
+        [](AsyncWebServerRequest *request) {},
+        nullptr,
+        [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+            String message;
+            message.reserve(len);
+            for (size_t i = 0; i < len; i++) message += (char)data[i];
+
+            if (message.length() == 0) {
+                request->send(400, "text/plain", "Mensagem vazia.");
+                return;
+            }
+
+            _testLoraRequest.pending = true;
+            _testLoraRequest.message = message;
+
+            request->send(200, "text/plain", "Transmitindo pacote de teste pelo radio...");
+        }
+    );
+
     // --- MQTT ---
     // Trocar de broker nao arrisca o acesso a pagina (WiFi continua
     // o mesmo), entao aplica direto, sem a logica de reversao do WiFi.
@@ -190,6 +237,20 @@ void WebDashboard::broadcastMqttResult(bool ok)
     if (ws.count() == 0) return;
 
     ws.textAll(ok ? "{\"type\":\"mqtt\",\"ok\":true}" : "{\"type\":\"mqtt\",\"ok\":false}");
+}
+
+void WebDashboard::broadcastMqttTestResult(bool ok)
+{
+    if (ws.count() == 0) return;
+
+    ws.textAll(ok ? "{\"type\":\"mqttTest\",\"ok\":true}" : "{\"type\":\"mqttTest\",\"ok\":false}");
+}
+
+void WebDashboard::broadcastLoraSendResult(bool ok)
+{
+    if (ws.count() == 0) return;
+
+    ws.textAll(ok ? "{\"type\":\"loraSend\",\"ok\":true}" : "{\"type\":\"loraSend\",\"ok\":false}");
 }
 
 void WebDashboard::setStatus(const Status& status)

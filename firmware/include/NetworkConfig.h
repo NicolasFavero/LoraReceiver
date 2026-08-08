@@ -32,5 +32,7 @@ namespace NetConfig
     // se nenhuma rede WiFi conhecida conectar). Precisa ter pelo
     // menos 8 caracteres (minimo do WPA2) -- WiFi.softAP() falha
     // silenciosamente (cria rede aberta, sem senha) se for menor.
-    inline constexpr const char* AP_FALLBACK_PASSWORD = "loraconfig123";
+    // Impressa na serial toda vez que o AP sobe (ver startFallbackAP()
+    // em main.cpp) -- nao precisa decorar, so olhar o monitor serial.
+    inline constexpr const char* AP_FALLBACK_PASSWORD = "12345678";
 }

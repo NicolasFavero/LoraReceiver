@@ -38,6 +38,7 @@ namespace NetConfig
 
     // Senha do ponto de acesso de emergencia (criado automaticamente
     // se nenhuma rede WiFi conhecida conectar). Precisa ter pelo
-    // menos 8 caracteres (minimo do WPA2).
-    inline constexpr const char* AP_FALLBACK_PASSWORD = "loraconfig123";
+    // menos 8 caracteres (minimo do WPA2). Impressa na serial toda
+    // vez que o AP sobe (ver startFallbackAP() em main.cpp).
+    inline constexpr const char* AP_FALLBACK_PASSWORD = "12345678";
 }

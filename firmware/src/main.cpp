@@ -292,6 +292,86 @@ void handleWifiChangeRequest()
     }
 }
 
+// Trata o pedido de mensagem MQTT de teste vindo da pagina
+// (POST /testMqtt) -- publica o payload literal (o que a pagina
+// mandar) no topico configurado, so' pra confirmar que o broker esta
+// alcancavel, sem precisar esperar um pacote LoRa de verdade chegar.
+void handleTestMqttRequest()
+{
+    const auto& pending = dashboard.pendingTestMqtt();
+    if (!pending.pending) return;
+
+    String payload = pending.payload;
+    dashboard.clearTestMqttRequest();
+
+    if (!netConfig.mqttEnabled() || !mqttClient.connected())
+    {
+        Serial.println("[MQTT] Teste solicitado, mas o MQTT esta desabilitado/desconectado.");
+        dashboard.broadcastMqttTestResult(false);
+        return;
+    }
+
+    bool ok = mqttClient.publish(netConfig.mqttTopic().c_str(), payload.c_str());
+
+    Serial.print("[MQTT] Mensagem de teste ");
+    Serial.println(ok ? "publicada com sucesso." : "falhou ao publicar (payload maior que o buffer?).");
+
+    dashboard.broadcastMqttTestResult(ok);
+}
+
+// Trata o pedido de transmissao de teste vindo da pagina (POST
+// /testLora) -- manda o texto direto pelo radio, como se fosse outro
+// transmissor, pra testar o TX sem precisar de hardware extra.
+//
+// NAO-BLOQUEANTE de proposito, mesma logica de handleWifiChangeRequest()
+// acima: radio.startSend()/pollSend() usam a API assincrona da
+// RadioLib. A versao antiga chamava radio.transmit() (bloqueante) direto
+// aqui -- isso prendia o loop() inteiro (WiFi, MQTT, servidor web,
+// watchdog) pelo tempo de ar do pacote, e se esse tempo passasse de
+// WatchdogConfig::TIMEOUT_MS, o watchdog disparava e reiniciava a
+// placa no meio do envio (era esse o motivo do reset ao testar TX).
+enum class LoraTestSendState { Idle, Sending };
+LoraTestSendState loraTestSendState = LoraTestSendState::Idle;
+
+void handleTestLoraRequest()
+{
+    if (loraTestSendState == LoraTestSendState::Idle)
+    {
+        const auto& pending = dashboard.pendingTestLora();
+        if (!pending.pending) return;
+
+        String message = pending.message;
+        dashboard.clearTestLoraRequest();
+
+        if (radio.startSend(message.c_str()))
+        {
+            Serial.println("[LoRa] Transmitindo pacote de teste...");
+            loraTestSendState = LoraTestSendState::Sending;
+        }
+        else
+        {
+            Serial.println("[LoRa] Falha ao iniciar a transmissao de teste.");
+            dashboard.broadcastLoraSendResult(false);
+        }
+
+        return;
+    }
+
+    // Sending: poll ate a RadioLib confirmar (via IRQ) ou estourar o
+    // timeout interno do pollSend() -- nao bloqueia nenhuma dessas
+    // chamadas, so' consulta o estado atual.
+    LoRa::SendResult result = radio.pollSend();
+    if (result == LoRa::SendResult::Pending) return;
+
+    bool ok = (result == LoRa::SendResult::Ok);
+
+    Serial.print("[LoRa] Pacote de teste ");
+    Serial.println(ok ? "transmitido com sucesso." : "falhou ao transmitir.");
+
+    dashboard.broadcastLoraSendResult(ok);
+    loraTestSendState = LoraTestSendState::Idle;
+}
+
 void onMqttMessage(char* topic, byte* payload, unsigned int length)
 {
     if (strcmp(topic, NetConfig::MQTT_TOPIC_LORA_CONFIG) != 0) return;
@@ -546,6 +626,8 @@ void loop()
     esp_task_wdt_reset();
 
     handleWifiChangeRequest();
+    handleTestMqttRequest();
+    handleTestLoraRequest();
 
     // Antes do AP de emergencia existir, tenta a cada ciclo (rapido
     // no boot). Depois que o AP sobe, um cooldown entre tentativas

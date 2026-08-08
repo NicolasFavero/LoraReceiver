@@ -1,6 +1,6 @@
 #include "RF96W.h"
 
-void LoRa::setFlag() {packetReceived = true;}
+void IRAM_ATTR LoRa::setFlag() {packetReceived = true;}
 
 LoRa::LoRa(
     uint8_t cs,
@@ -101,21 +101,65 @@ bool LoRa::reconfigure(
     return ok;
 }
 
-bool LoRa::send(const char* msg) {
+bool LoRa::startSend(const char* msg) {
 
-    if (msg == nullptr) {
+    if (msg == nullptr || _sending) {
         return false;
     }
 
     radio.standby();
+    packetReceived = false; // qualquer flag de RX pendente nao vale mais -- vamos reinterpretar o proximo IRQ como TX-done
 
-    int state = radio.transmit(msg);
+    int state = radio.startTransmit(msg);
 
-    radio.startReceive();
+    if (state != RADIOLIB_ERR_NONE) {
+        radio.startReceive();
+        return false;
+    }
 
-    return state == RADIOLIB_ERR_NONE;
+    _sending    = true;
+    _sendStartMs = millis();
+
+    return true;
 }
-bool LoRa::available() {return packetReceived;}
+
+LoRa::SendResult LoRa::pollSend() {
+
+    if (!_sending) {
+        return SendResult::Ok; // nada pendente -- no-op
+    }
+
+    // Generoso o bastante pro pior caso (SF alto + BW baixo + payload
+    // grande) sem deixar um radio travado preso pra sempre em "TX" se
+    // o IRQ nunca chegar a subir por algum motivo de hardware.
+    constexpr unsigned long SEND_TIMEOUT_MS = 8000;
+
+    if (packetReceived) {
+        packetReceived = false;
+        _sending = false;
+
+        int state = radio.finishTransmit();
+        radio.startReceive();
+
+        return state == RADIOLIB_ERR_NONE ? SendResult::Ok : SendResult::Failed;
+    }
+
+    if (millis() - _sendStartMs > SEND_TIMEOUT_MS) {
+        _sending = false;
+
+        radio.standby();
+        radio.startReceive();
+
+        return SendResult::Failed;
+    }
+
+    return SendResult::Pending;
+}
+
+bool LoRa::available() {
+    if (_sending) return false; // flag do DIO0 agora e' do TX em andamento, nao de um pacote recebido -- so pollSend() deve consumir
+    return packetReceived;
+}
 bool LoRa::receive() {
 
     if (!packetReceived) {

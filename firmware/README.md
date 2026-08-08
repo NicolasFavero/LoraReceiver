@@ -1,4 +1,4 @@
-# PCB-LoraReceiver
+# LoraReceiver
 
 Firmware PlatformIO de recepção LoRa (SX1276/RFM96W via RadioLib) com
 republicação MQTT e um **dashboard web** (pacotes ao vivo, status de
@@ -22,17 +22,6 @@ pelo dashboard web e vivem no NVS, não nesse arquivo. Se preferir
 nunca ter a senha real em nenhum arquivo de texto, dá pra deixar os
 placeholders do `.example` mesmo e configurar tudo direto pela
 página depois do primeiro upload.
-
-⚠️ **Se esse repositório já foi commitado alguma vez com a senha
-real dentro do `NetworkConfig.h`** (antes de existir esse
-`.gitignore`), só adicionar a regra agora **não apaga a senha do
-histórico do Git** -- ela continua recuperável em qualquer commit
-antigo, mesmo que o arquivo atual esteja limpo. Nesse caso o caminho
-mais simples e seguro é **trocar a senha do WiFi** (e a do broker
-MQTT, se tiver) antes de tornar o repositório público; limpar
-histórico do zero (`git filter-repo`, reescrever o repo) é possível
-mas mais trabalhoso e só vale a pena se trocar a senha não for
-opção.
 
 ## Estrutura
 

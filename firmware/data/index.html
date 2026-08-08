@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Nicolas Favero">
+<meta name="description" content="Dashboard do receptor LoRa">
+<title>LoRa Receiver -- Dashboard</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header>
+    <h1>LoRa Receiver</h1>
+    <div id="statusBar">
+        <span id="wifiBadge" class="badge">WiFi: --</span>
+        <span id="apBadge" class="badge hidden">AP: --</span>
+        <span id="mqttBadge" class="badge">MQTT: --</span>
+        <span id="lastPacketBadge" class="badge">Ultimo pacote: --</span>
+    </div>
+</header>
+
+<nav id="tabs">
+    <button class="tabButton active" data-tab="live">Ao vivo</button>
+    <button class="tabButton" data-tab="lora">LoRa</button>
+    <button class="tabButton" data-tab="wifi">WiFi</button>
+    <button class="tabButton" data-tab="mqtt">MQTT</button>
+</nav>
+
+<main>
+
+    <!-- ===== AO VIVO ===== -->
+    <section class="tabPanel" id="tab-live">
+
+        <div class="statGrid">
+            <div class="statCard">
+                <span class="statLabel">RSSI</span>
+                <span class="statValue" id="statRssi">--</span>
+            </div>
+            <div class="statCard">
+                <span class="statLabel">SNR</span>
+                <span class="statValue" id="statSnr">--</span>
+            </div>
+            <div class="statCard">
+                <span class="statLabel">Heap livre</span>
+                <span class="statValue" id="statHeap">--</span>
+            </div>
+            <div class="statCard">
+                <span class="statLabel">Uptime</span>
+                <span class="statValue" id="statUptime">--</span>
+            </div>
+        </div>
+
+        <h3>Pacotes recebidos (tempo real)</h3>
+        <div id="packetLog"></div>
+
+    </section>
+
+    <!-- ===== LORA ===== -->
+    <section class="tabPanel hidden" id="tab-lora">
+        <form id="loraForm">
+            <section class="card">
+                <h3>Frequencia (Hz)</h3>
+                <input type="number" id="freq" placeholder="915000000">
+            </section>
+            <section class="card">
+                <h3>Spreading Factor</h3>
+                <input type="number" id="sf" placeholder="10">
+            </section>
+            <section class="card">
+                <h3>Bandwidth (Hz)</h3>
+                <input type="number" id="bd" placeholder="125000">
+            </section>
+            <section class="card">
+                <h3>Sync Word (decimal)</h3>
+                <input type="number" id="sync" placeholder="18">
+            </section>
+            <section class="card">
+                <h3>Coding Rate</h3>
+                <input type="number" id="cr" placeholder="5">
+            </section>
+            <section class="card">
+                <h3>Potencia TX (dBm)</h3>
+                <input type="number" id="power" placeholder="20">
+            </section>
+            <section class="card">
+                <h3>CRC</h3>
+                <select id="crc">
+                    <option value="1">Habilitado</option>
+                    <option value="0">Desabilitado</option>
+                </select>
+            </section>
+            <div class="actions">
+                <button type="submit">Salvar configuracao do radio</button>
+            </div>
+            <p class="status" id="loraStatus"></p>
+        </form>
+    </section>
+
+    <!-- ===== WIFI ===== -->
+    <section class="tabPanel hidden" id="tab-wifi">
+        <form id="wifiForm">
+            <section class="card">
+                <h3>SSID atual</h3>
+                <p id="currentSsid" class="readonly">--</p>
+            </section>
+            <section class="card">
+                <h3>Novo SSID</h3>
+                <input type="text" id="wifiSsid" placeholder="nome da rede">
+            </section>
+            <section class="card">
+                <h3>Nova senha</h3>
+                <input type="password" id="wifiPassword" placeholder="senha">
+            </section>
+            <div class="actions">
+                <button type="submit">Trocar WiFi</button>
+            </div>
+            <p class="hint">
+                Se a rede/senha nova estiver errada, o receptor volta
+                sozinho pra rede anterior depois de ~15s -- a pagina
+                pode ficar fora do ar durante essa janela.
+            </p>
+            <p class="status" id="wifiStatus"></p>
+        </form>
+
+        <h3>Redes secundarias (fallback, em ordem de prioridade)</h3>
+        <p class="hint">
+            Usadas so' se a rede principal acima nao conectar -- tentadas
+            na ordem de prioridade (menor numero primeiro). Se nenhuma
+            conectar, o receptor cria um ponto de acesso proprio pra
+            reconfiguracao (confira a serial, ou o badge "AP" no topo
+            se voce ja estiver conectado nele agora).
+        </p>
+        <div id="wifiSecondaryList"></div>
+        <div class="actions">
+            <button type="button" id="wifiSecondaryAddBtn">+ Adicionar rede</button>
+            <button type="button" id="wifiSecondarySaveBtn">Salvar redes secundarias</button>
+        </div>
+        <p class="status" id="wifiSecondaryStatus"></p>
+    </section>
+
+    <!-- ===== MQTT ===== -->
+    <section class="tabPanel hidden" id="tab-mqtt">
+        <form id="mqttForm">
+            <section class="card">
+                <h3>Broker (IP ou host)</h3>
+                <input type="text" id="mqttServer" placeholder="192.168.1.34">
+            </section>
+            <section class="card">
+                <h3>Porta</h3>
+                <input type="number" id="mqttPort" placeholder="1883">
+            </section>
+            <section class="card">
+                <h3>Usuario (deixe vazio se anonimo)</h3>
+                <input type="text" id="mqttUser" placeholder="">
+            </section>
+            <section class="card">
+                <h3>Topico de publicacao</h3>
+                <input type="text" id="mqttTopic" placeholder="telemetry">
+            </section>
+            <section class="card">
+                <h3>Senha</h3>
+                <input type="password" id="mqttPassword" placeholder="">
+            </section>
+            <section class="card">
+                <h3>MQTT habilitado</h3>
+                <select id="mqttEnabled">
+                    <option value="1">Sim -- publica e assina tópicos</option>
+                    <option value="0">Nao -- so LoRa + pagina web</option>
+                </select>
+            </section>
+            <div class="actions">
+                <button type="submit">Salvar configuracao MQTT</button>
+            </div>
+            <p class="status" id="mqttStatus"></p>
+        </form>
+    </section>
+
+</main>
+
+<footer>
+    <p>As alteracoes de LoRa/MQTT sao aplicadas na hora. WiFi tem confirmacao automatica (ver aba WiFi).</p>
+</footer>
+
+<script src="/script.js"></script>
+</body>
+</html>

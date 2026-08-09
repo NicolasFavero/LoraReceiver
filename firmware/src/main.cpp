@@ -527,7 +527,7 @@ bool publishPacket()
     snprintf(
         payload,
         sizeof(payload),
-        "{\"packet\":\"%s\",\"rssi\":%.2f,\"snr\":%.2f}",
+        "{\"data\":\"%s\",\"rssi\":%.2f,\"snr\":%.2f}",
         escaped,
         radio.getRSSI(),
         radio.getSNR()
